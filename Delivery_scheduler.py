@@ -56,6 +56,7 @@ class DeliveryService(abc.ABC):
             time.sleep(0.5)
 
     def _ship(self, delay: int):
+        """All concrete .ship() MUST call this method!"""
         def callback():
             blocking_process(delay)
             STORAGE["delivery"][self._order.number][1] = "finished"
@@ -64,6 +65,10 @@ class DeliveryService(abc.ABC):
 
         thread = threading.Thread(target=callback)
         thread.start()
+
+    @abc.abstractmethod
+    def ship(self):
+        """Concrete delivery provider implementation."""
 
 
 class Uklon(DeliveryService):
