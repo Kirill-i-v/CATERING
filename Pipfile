@@ -6,9 +6,10 @@ name = "pypi"
 [packages]
 django = "==5.1.5"
 djangorestframework = "==3.15.2"
-pylint = "*"
 
 [dev-packages]
+pylint = "*"
+django-stubs = "*"
 
 [requires]
 python_version = "3.12"
