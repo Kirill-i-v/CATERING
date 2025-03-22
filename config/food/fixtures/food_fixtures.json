@@ -1,0 +1,114 @@
+[
+    {
+        "model": "food.restaurant",
+        "pk": 1,
+        "fields": {
+            "name": "Gourmet Haven",
+            "address": "123 Main St"
+        }
+    },
+    {
+        "model": "food.restaurant",
+        "pk": 2,
+        "fields": {
+            "name": "Tasty Corner",
+            "address": "456 Side Ave"
+        }
+    },
+    {
+        "model": "food.restaurant",
+        "pk": 3,
+        "fields": {
+            "name": "Savory Bites",
+            "address": "789 Food Ln"
+        }
+    },
+    {
+        "model": "food.dish",
+        "pk": 1,
+        "fields": {
+            "name": "Spaghetti Carbonara",
+            "price": 12,
+            "restaurant": 1
+        }
+    },
+    {
+        "model": "food.dish",
+        "pk": 2,
+        "fields": {
+            "name": "Grilled Chicken",
+            "price": 15,
+            "restaurant": 1
+        }
+    },
+    {
+        "model": "food.dish",
+        "pk": 3,
+        "fields": {
+            "name": "Veggie Burger",
+            "price": 10,
+            "restaurant": 2
+        }
+    },
+    {
+        "model": "food.dish",
+        "pk": 4,
+        "fields": {
+            "name": "Steak",
+            "price": 20,
+            "restaurant": 3
+        }
+    },
+    {
+        "model": "food.dish",
+        "pk": 5,
+        "fields": {
+            "name": "Caesar Salad",
+            "price": 8,
+            "restaurant": 2
+        }
+    },
+    {
+        "model": "food.dishesorder",
+        "pk": 1,
+        "fields": {
+            "external_order_id": "ORD12345",
+            "user": 1
+        }
+    },
+    {
+        "model": "food.dishesorder",
+        "pk": 2,
+        "fields": {
+            "external_order_id": "ORD67890",
+            "user": 1
+        }
+    },
+    {
+        "model": "food.dishorderitem",
+        "pk": 1,
+        "fields": {
+            "quantity": 2,
+            "order": 1,
+            "dish": 1
+        }
+    },
+    {
+        "model": "food.dishorderitem",
+        "pk": 2,
+        "fields": {
+            "quantity": 1,
+            "order": 1,
+            "dish": 3
+        }
+    },
+    {
+        "model": "food.dishorderitem",
+        "pk": 3,
+        "fields": {
+            "quantity": 1,
+            "order": 2,
+            "dish": 4
+        }
+    }
+]
