@@ -1,46 +1,54 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
+
 
 class Restaurant(models.Model):
-    name = models.CharField(max_length=100)
-    address = models.CharField(max_length=100, blank=True)
-
     class Meta:
         db_table = "restaurants"
 
-    def __str__(self):
-        return self.name
+    name = models.CharField(max_length=100, blank=False)
+
+    address = models.CharField(max_length=100, blank=True)
+
+    def __str__(self) -> str:
+        return f"[{self.pk}] {self.name}"
+
 
 class Dish(models.Model):
-    name = models.CharField(max_length=50, null=True)
-    price = models.IntegerField()
-    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
-
     class Meta:
         db_table = "dishes"
-        verbose_name_plural = "Dishes"
 
-    def __str__(self):
-        return f"{self.name} - {self.price} ({self.restaurant})"
+        verbose_name_plural = "dishes"
 
-class DishesOrder(models.Model):
-    external_order_id = models.CharField(max_length=255)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    name = models.CharField(max_length=50, null=True)
+
+    price = models.IntegerField()
+
+    restaurant = models.ForeignKey("Restaurant", on_delete=models.CASCADE)
+
+    def __str__(self) -> str:
+        return f"{self.name} {self.price}  ({self.restaurant})"
+
+
+class Order(models.Model):
 
     class Meta:
-        db_table = "dishes_orders"
-        verbose_name_plural = "Dishes Orders"
+        db_table = "orders"
+    status = models.CharField(max_length=20)
+    provider = models.CharField(max_length=20, null=True, blank=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+    )
 
-    def __str__(self):
-        return f"Order {self.external_order_id} by {self.user.username}"
+    def __str__(self) -> str:
+        return f"{self.pk} {self.status} for {self.user.email}"
+
 
 class DishOrderItem(models.Model):
     quantity = models.SmallIntegerField()
-    order = models.ForeignKey(DishesOrder, on_delete=models.CASCADE)
-    dish = models.ForeignKey(Dish, on_delete=models.CASCADE)
+    dish = models.ForeignKey("Dish", on_delete=models.CASCADE)
+    order = models.ForeignKey("Order", on_delete=models.CASCADE)
 
-    class Meta:
-        db_table = "dish_order_items"
-
-    def __str__(self):
-        return f"{self.dish.name} x{self.quantity} (Order {self.order.external_order_id})"
+    def __str__(self) -> str:
+        return f"[{self.order.pk}] {self.dish.name}: {self.quantity}"
