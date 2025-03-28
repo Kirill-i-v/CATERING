@@ -6,7 +6,6 @@ admin.site.register(Restaurant)
 
 def import_csv(self, request, queryset):
     print("testing import CSV custom action")
-
     return HttpResponseRedirect("/import-dishes")
 
 
