@@ -11,12 +11,8 @@ class Role(StrEnum):
     @classmethod
     def choices(cls):
         results = []
-
         for element in cls:
-            # >>> Role.ADMIN [name: AADMIN, value: ADMIN]
-
+            # >>> Role.ADMIN [name: ADMIN, value: ADMIN]
             _element = (element.value, element.name.lower().capitalize())
-
             results.append(_element)
-
         return results
