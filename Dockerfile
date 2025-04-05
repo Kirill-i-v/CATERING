@@ -21,4 +21,4 @@ RUN pipenv install --system --deploy
 # copy the project
 COPY config ./
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["gunicorn", "CATERING.wsgi:application", "--bind", "0.0.0.0:8000"]

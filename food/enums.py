@@ -10,6 +10,7 @@ class OrderStatus(StrEnum):
     DRIVER_WAITING = auto()
     DELIVERED = auto()
     NOT_DELIVERED = auto()
+    CANCELLED = auto()
 
     @classmethod
     def choices(cls):
@@ -17,7 +18,6 @@ class OrderStatus(StrEnum):
 
         for element in cls:
             _element = (element.value, element.name.lower().capitalize())
-
             results.append(_element)
 
         return results

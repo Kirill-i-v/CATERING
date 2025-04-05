@@ -1,6 +1,8 @@
 import uuid
 from django.core.mail import send_mail
 from django.contrib.auth import get_user_model
+from shared.cache import CacheService
+
 
 User = get_user_model()
 CACHE: dict[uuid.UUID, dict] = {}
@@ -11,6 +13,7 @@ class Activator:
 
     def __init__(self, email: str | None = None) -> None:
         self.email: str | None = email
+        self.cache = CacheService()
 
     def create_activation_key(self) -> uuid.UUID:
         # assert self.email
@@ -46,13 +49,17 @@ class Activator:
         3. Return None
         """
         payload = {"user_id": user_id}
-        CACHE[activation_key] = payload
+        self.cache.set(
+            namespace="activation", key=str(activation_key), instance=payload, ttl=10
+        )
 
     def activate_user(self, activation_key: uuid.UUID | None) -> None:
         if activation_key is None:
             raise ValueError("Can not activate user without activation key")
         else:
-            user_cache_payload = CACHE[activation_key]
+            user_cache_payload: dict = self.cache.get(
+                namespace="activation", key=str(activation_key)
+            )
             user = User.objects.get(id=user_cache_payload["user_id"])
             user.is_active = True
             user.save()

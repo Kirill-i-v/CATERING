@@ -3,8 +3,9 @@ from rest_framework import status, viewsets, routers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Dish, DishOrderItem, Order, Restaurant
-from .serializers import DishSerializer, OrderSerializer, RestaurantSerializer
+from .serializers import DishSerializer, OrderCreateSerializer, RestaurantSerializer
 from .enums import OrderStatus
+from shared.cache import CacheService
 
 
 class FoodAPIViewSet(viewsets.GenericViewSet):
@@ -21,14 +22,35 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
     # HTTP POST /food/orders
     @action(methods=["post"], detail=False)
     def orders(self, request: WSGIRequest):
-        serializer = OrderSerializer(data=request.data)
+        """create new order for food.
+               HTTP REQUEST EXAMPLE
+               {
+                   "food": {
+                       1: 3  // id: quantity
+                       2: 1  // id: quantity
+                   }
+                   },
+                   "eta": TIMESTAMP
+               }
+
+               WORKFLOW
+               1. validate the input
+               2. create ``
+               """
+
+        serializer = OrderCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         if not isinstance(serializer.validated_data, dict):
             raise ValueError("Invalid order format")
 
-        order = Order.objects.create(status=OrderStatus.NOT_STARTED, user=request.user)
-        print(f"New Food Order is created: {order.pk}")
+        order = Order.objects.create(
+            status=OrderStatus.NOT_STARTED,
+            user=request.user,
+            eta=serializer.validated_data["eta"],
+        )
+        print(f"New Food Order is created: {order.pk}.\nETA: {order.eta}")
+
 
         try:
             dishes_order = serializer.validated_data["food"]
@@ -41,7 +63,34 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
             )
             print(f"New Dish Order Item is created: {instance.pk}")
 
-        return Response(data={}, status=status.HTTP_201_CREATED)
+        cache = CacheService()
+        cache.set(
+            namespace="orders_processing",
+            key=f"order:{order.pk}",
+            instance={
+                "id": order.pk,
+                "status": order.status,
+                "eta": str(order.eta),
+                "user_id": order.user.id,
+                "items": [
+                    {
+                        "dish_id": item.dish.id,
+                        "restaurant_id": item.dish.restaurant.id,
+                    }
+                    for item in order.items.all()
+                ],
+            },
+            ttl=36000
+        )
+
+        return Response(data={
+                "id": order.pk,
+                "status": order.status,
+                "eta": order.eta,
+                "total": 9999,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
     # HTTP GET /food/restaurants
     @action(methods=["get"], detail=False)
