@@ -11,6 +11,7 @@ from shared.cache import CacheService
 class FoodAPIViewSet(viewsets.GenericViewSet):
     queryset = Restaurant.objects.all()
     serializer_class = RestaurantSerializer
+    cache = CacheService()
 
     # HTTP GET /food/dishes
     @action(methods=["get"], detail=False)
@@ -22,21 +23,6 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
     # HTTP POST /food/orders
     @action(methods=["post"], detail=False)
     def orders(self, request: WSGIRequest):
-        """create new order for food.
-               HTTP REQUEST EXAMPLE
-               {
-                   "food": {
-                       1: 3  // id: quantity
-                       2: 1  // id: quantity
-                   }
-                   },
-                   "eta": TIMESTAMP
-               }
-
-               WORKFLOW
-               1. validate the input
-               2. create ``
-               """
 
         serializer = OrderCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -51,6 +37,11 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
         )
         print(f"New Food Order is created: {order.pk}.\nETA: {order.eta}")
 
+        cache = CacheService()
+        cache_key = f"orders:{OrderStatus.NOT_STARTED}"
+        existing = cache.get("orders", OrderStatus.NOT_STARTED) or []
+        existing.append(order.pk)
+        cache.set("orders", OrderStatus.NOT_STARTED, existing)
 
         try:
             dishes_order = serializer.validated_data["food"]
@@ -62,26 +53,6 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
                 dish=dish_order["dish"], quantity=dish_order["quantity"], order=order
             )
             print(f"New Dish Order Item is created: {instance.pk}")
-
-        cache = CacheService()
-        cache.set(
-            namespace="orders_processing",
-            key=f"order:{order.pk}",
-            instance={
-                "id": order.pk,
-                "status": order.status,
-                "eta": str(order.eta),
-                "user_id": order.user.id,
-                "items": [
-                    {
-                        "dish_id": item.dish.id,
-                        "restaurant_id": item.dish.restaurant.id,
-                    }
-                    for item in order.items.all()
-                ],
-            },
-            ttl=36000
-        )
 
         return Response(data={
                 "id": order.pk,

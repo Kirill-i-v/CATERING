@@ -1,11 +1,10 @@
 from datetime import date
 from threading import Thread
 from time import sleep
-import json
 from django.db.models import QuerySet
-from shared.cache import CacheService
 from food.models import Order
 from food.enums import OrderStatus
+from shared.cache import CacheService
 
 
 class Processor:
@@ -17,77 +16,60 @@ class Processor:
     def __init__(self) -> None:
         self._thread = Thread(target=self.process, daemon=True)
         self.cache = CacheService()
-        print("Orders Processor is created")
+        print(f"Orders Processor is created")
 
     @property
     def today(self):
         return date.today()
 
-    def start(self):
-        self._thread.start()
-        print("Orders Processor started processing orders")
-
     def process(self):
         while True:
-            try:
-                self._process()
-            except Exception as e:
-                print(f"[Processor Error] {e}")
+            self._process()
             sleep(2)
 
     def _process(self):
-        keys = self.cache.connection.keys("orders_processing:order:*")
-        print(f"[Processor] Found {len(keys)} order(s) in cache")
-
-        for key in keys:
-            raw = self.cache.connection.get(key)
-            if not raw:
+        for status in [OrderStatus.NOT_STARTED, OrderStatus.COOKING_REJECTED]:
+            order_ids = self.cache.get("orders", status) or []
+            if not order_ids:
                 continue
 
-            try:
-                order_data = json.loads(raw)
-            except json.JSONDecodeError:
-                print(f"[Processor] Invalid JSON for key {key}, deleting it")
-                self.cache.connection.delete(key)
-                continue
+            orders = Order.objects.filter(id__in=order_ids)
+            for order in orders:
+                match order.status:
+                    case OrderStatus.NOT_STARTED:
+                        self._process_not_started(order)
+                    case OrderStatus.COOKING_REJECTED:
+                        self._process_cooking_rejected()
+                    case _:
+                        print(f"Unrecognized order status: {order.status}. passing")
 
-            status = order_data.get("status")
-            eta_str = order_data.get("eta")
-            order_id = order_data.get("id")
+    def _update_cache(self, order_id: int, from_status: str, to_status: str):
+        # Remove the old status
+        old_list = self.cache.get("orders", from_status) or []
+        if order_id in old_list:
+            old_list.remove(order_id)
+            self.cache.set("orders", from_status, old_list)
 
-            if not status or not eta_str or not order_id:
-                print(f"[Processor] Missing data in cache for order {key}, skipping")
-                continue
+        # Add to new status
+        new_list = self.cache.get("orders", to_status) or []
+        new_list.append(order_id)
+        self.cache.set("orders", to_status, new_list)
 
-            eta = date.fromisoformat(eta_str)
-
-            match status:
-                case OrderStatus.NOT_STARTED:
-                    self._process_not_started(order_data, eta)
-                case OrderStatus.COOKING_REJECTED:
-                    self._process_cooking_rejected()
-                case _:
-                    print(f"[Processor] Unrecognized status {status}, skipping")
-
-    def _process_not_started(self, order_data: dict, eta: date):
-        order_id = order_data["id"]
-
-        if eta > self.today:
-            return  # Future order – do nothing
-
-        elif eta < self.today:
-            # Expired ETA – cancel
-            Order.objects.filter(pk=order_id).update(status=OrderStatus.CANCELLED)
-            print(f"[Processor] Cancelled expired order {order_id}")
-            self.cache.delete("orders_processing", f"order:{order_id}")
-
+    def _process_not_started(self, order: Order):
+        if order.eta > self.today:
+            pass
+        elif order.eta < self.today:
+            order.status = OrderStatus.CANCELLED
+            order.save()
+            self._update_cache(order.pk, OrderStatus.NOT_STARTED, OrderStatus.CANCELLED)
+            print(f"Cancelled order {order}")
         else:
-            # ETA is today – begin cooking
-            Order.objects.filter(pk=order_id).update(status=OrderStatus.COOKING)
-            restaurant_ids = {item["restaurant_id"] for item in order_data["items"]}
-            print(f"[Processor] Order {order_id} is now COOKING")
-            print(f"[Processor] Involved restaurants: {restaurant_ids}")
-            self.cache.delete("orders_processing", f"order:{order_id}")
+            order.status = OrderStatus.COOKING
+            order.save()
+            self._update_cache(order.pk, OrderStatus.NOT_STARTED, OrderStatus.COOKING)
+            restaurants = {item.dish.restaurant for item in order.items.all()}
+            print(f"Finished preparing order. Restaurants: {restaurants}")
+            print(f"Order: {order}")
 
     def _process_cooking_rejected(self):
         raise NotImplementedError
