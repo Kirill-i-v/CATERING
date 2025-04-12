@@ -47,7 +47,6 @@ INSTALLED_APPS = [
     'delivery',
     "users",
     "shared",
-    "orders",
 ]
 
 MIDDLEWARE = [
@@ -91,7 +90,7 @@ DATABASES = {
         "NAME": "catering",
         "USER": "postgres",
         "PASSWORD": "postgres",
-        "HOST": "localhost",
+        "HOST": "database",
         "PORT": "5432",
         "ATOMIC_REQUESTS": True,
     }
@@ -167,3 +166,10 @@ EMAIL_HOST = "localhost"
 EMAIL_PORT = 1025
 EMAIL_HOST_USER = "mailpit"
 EMAIL_HOST_PASSWORD = "mailpit"
+
+# CELERY SECTION
+# settings ref: https://docs.celeryq.dev/en/stable/userguide/configuration.html
+CELERY_BROKER_URL = "redis://localhost:6380/0"
+CELERY_ACCEPT_CONTENT = ["pickle", "application/json", "application/x-python-serialize"]
+CELERY_TASK_SERIALIZER = "pickle"
+CELERY_EVENT_SERIALIZER = "pickle"

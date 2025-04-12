@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Dish, Restaurant, Order, DishOrderItem
+from .models import Dish, DishOrderItem, Order, Restaurant
+
 
 admin.site.register(Restaurant)
 
@@ -12,11 +13,8 @@ def import_csv(self, request, queryset):
 @admin.register(Dish)
 class DishAdmin(admin.ModelAdmin):
     list_display = ("name", "price", "restaurant")
-
     search_fields = ("name",)
-
     list_filter = ("name", "restaurant")
-
     actions = ["import_csv"]
 
 

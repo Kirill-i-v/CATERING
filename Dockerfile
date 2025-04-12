@@ -12,7 +12,7 @@ RUN pip install --upgrade pip setuptools pipenv
 
 
 # aka ``cd``
-# WORKDIR /app/
+WORKDIR /app/
 
 # aka ``cp`` on unix
 COPY Pipfile Pipfile.lock ./
@@ -21,4 +21,4 @@ RUN pipenv install --system --deploy
 # copy the project
 COPY config ./
 
-CMD ["gunicorn", "CATERING.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]

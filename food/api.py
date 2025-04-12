@@ -1,10 +1,12 @@
+from celery.result import AsyncResult
 from django.core.handlers.wsgi import WSGIRequest
-from rest_framework import status, viewsets, routers
+from rest_framework import routers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from .enums import OrderStatus
 from .models import Dish, DishOrderItem, Order, Restaurant
 from .serializers import DishSerializer, OrderCreateSerializer, RestaurantSerializer
-from .enums import OrderStatus
+from .services import schedule_order
 from shared.cache import CacheService
 
 
@@ -30,12 +32,11 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
         if not isinstance(serializer.validated_data, dict):
             raise ValueError("Invalid order format")
 
-        order = Order.objects.create(
+        order: Order = Order.objects.create(
             status=OrderStatus.NOT_STARTED,
             user=request.user,
             eta=serializer.validated_data["eta"],
         )
-        print(f"New Food Order is created: {order.pk}.\nETA: {order.eta}")
 
         cache = CacheService()
         cache_key = f"orders:{OrderStatus.NOT_STARTED}"
@@ -53,6 +54,9 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
                 dish=dish_order["dish"], quantity=dish_order["quantity"], order=order
             )
             print(f"New Dish Order Item is created: {instance.pk}")
+
+        schedule_order(order=order)
+        print(f"New Food Order is created: {order.pk}.\nETA: {order.eta}")
 
         return Response(data={
                 "id": order.pk,

@@ -1,6 +1,5 @@
-from django.db import models
 from django.conf import settings
-
+from django.db import models
 
 class Restaurant(models.Model):
     class Meta:
@@ -42,6 +41,9 @@ class Order(models.Model):
     def __str__(self) -> str:
         return f"{self.pk} {self.status} for {self.user.email}"
 
+    def __repr__(self) -> str:
+        return super().__str__()
+
 
 class DishOrderItem(models.Model):
     class Meta:
@@ -53,3 +55,16 @@ class DishOrderItem(models.Model):
 
     def __str__(self) -> str:
         return f"[{self.order.pk}] {self.dish.name}: {self.quantity}"
+
+
+class ExternalOrder(models.Model):
+    class Meta:
+        db_table = "external_orders"
+
+    provider = models.CharField(max_length=20)  # "melange" or "bueno"
+    external_id = models.CharField(max_length=100, unique=True)
+    status = models.CharField(max_length=50)
+    order = models.ForeignKey("Order", on_delete=models.CASCADE, related_name="external_orders")
+
+    def __str__(self):
+        return f"{self.provider} - {self.external_id}: {self.status}"

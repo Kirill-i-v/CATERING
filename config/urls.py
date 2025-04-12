@@ -17,8 +17,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from rest_framework_simplejwt.views import TokenObtainPairView
-from users.api import router as users_router
 from food.api import router as food_router
+from users.api import router as users_router
 
 urlpatterns = (
         [

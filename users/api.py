@@ -60,5 +60,6 @@ class UserAPIViewSet(viewsets.GenericViewSet):
         service.activate_user(activation_key=serializer.validated_data.get("key"))
         return Response(data=None, status=status.HTTP_204_NO_CONTENT)
 
+
 router = routers.DefaultRouter()
 router.register(r"users", UserAPIViewSet, basename="user")
