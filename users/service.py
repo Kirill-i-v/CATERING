@@ -11,15 +11,10 @@ CACHE: dict[uuid.UUID, dict] = {}
 @celery_app.task
 def send_activation_mail(email: str, activation_link: str):
     send_mail(
-
         subject="User activation",
-
         message=f"Please, activate your accout: {activation_link}",
-
         from_email="admin@catering.support.com",
-
         recipient_list=[email],
-
     )
 
 
