@@ -64,156 +64,97 @@ MELANGE HTTP GET /api/orders/<ID>
 from collections import defaultdict
 from datetime import datetime, date, time
 import json
-from food.models import ExternalOrder
 from time import sleep
 import uuid
 import httpx
-from shared.cache import CacheService
-from .models import DishOrderItem, Order
+from celery import shared_task
+from .models import Restaurant, Order, DishOrderItem
 from .enums import Restaurant
 from config import celery_app
+from .models import ExternalOrder
 
 
-class OrderInCache:
-    """
-    {
-        "bueno"|"melange": {
-            "external_id": string,
-            "status": string,
-            "dishes": [
-                {
-                    "dish": string,
-                    "quantity": number,
-                }, ...
-            ]
-        }
-    }
-    """
-
-    def __init__(self) -> None:
-        # self.orders: dict[str, dict[str, list[dict]]] = defaultdict(lambda: defaultdict(list))
-        self.orders: dict[str, dict[str, str | list[dict]]] = defaultdict(dict)
-
-    def append(self, restaurant: str, item: DishOrderItem):
-        if not self.orders[restaurant]:
-            self.orders[restaurant] = {
-                "external_id": "",
-                "status": "not_started",
-                "dishes": [
-                    {
-                        "dish": item.dish.name,
-                        "quantity": item.quantity,
-                    }
-                ],
-            }
-
-        else:
-            self.orders[restaurant]["dishes"].append(
-                {
-                    "dish": item.dish.name,
-                    "quantity": item.quantity,
-                }
-            )
-
-
-# todo: uncomment
 @celery_app.task
-def melange_order_processing(order: OrderInCache):
-    while (current_status := order.orders[Restaurant.MELANGE]["status"]) != "finished":
-        if current_status == "not_started":
-            if not order.orders[Restaurant.MELANGE]["external_id"]:
-                payload = {"order": order.orders[Restaurant.MELANGE]["dishes"]}
-                response = httpx.post("http://localhost:8001/api/orders", json=payload)
-                response.raise_for_status()
-                order.orders[Restaurant.MELANGE]["external_id"] = response.json()["id"]
+def melange_order_processing(order_id: int):
+    try:
+        external_order = ExternalOrder.objects.get(order_id=order_id, provider=Restaurant.MELANGE)
 
-            else:
-                external_order_id = order.orders[Restaurant.MELANGE]["external_id"]
-                response = httpx.get(
-                    f"http://localhost:8001/api/orders/{external_order_id}"
-                )
-                response.raise_for_status()
-
-                # update the status of order
-                order.orders[Restaurant.MELANGE]["status"] = response.json()["status"]
-                print(f"Current status is {current_status}. Waiting 1 second")
-                sleep(1)
-
-        elif current_status == "cooking":
-            external_order_id = order.orders[Restaurant.MELANGE]["external_id"]
-            response = httpx.get(
-                f"http://localhost:8001/api/orders/{external_order_id}"
-                )
+        while external_order.status != "finished":
+            response = httpx.get(f"http://localhost:8001/api/orders/{external_order.external_id}")
             response.raise_for_status()
 
-            # update the status of order
-            order.orders[Restaurant.MELANGE]["status"] = response.json()["status"]
-            print(f"Current status is {current_status}. Waiting 3 second")
-            sleep(3)
+            new_status = response.json()["status"]
+            print(f"MELANGE STATUS: {new_status}")
+            external_order.status = new_status
+            external_order.save()
 
-        elif current_status == "cooked":
-            print(f"🚚 CALLING DELIVERY SERVICE TO PASS THE FOOD ORDER")
+            if new_status == "cooking":
+                sleep(3)
+            elif new_status == "not_started":
+                sleep(1)
+            elif new_status == "cooked":
+                print("🚚 Delivery service should be called here")
+                sleep(1)
+            else:
+                raise ValueError(f"{new_status} is not supported")
 
-        else:
-            raise ValueError(f"Status {current_status} is not supported")
+    except ExternalOrder.DoesNotExist:
+        print("Melange order not found in the database.")
 
 
-def bueno_order_processing(order: OrderInCache):
+def bueno_order_processing(order_id: int):
     print("BUENO===============================")
-    print(order.orders)
+    print(order_id)
     print("BUENO===============================")
 
 
-# todo: uncomment
-@celery_app.task
-def _schedule_order(order: Order):
+@shared_task
+def _schedule_order(order_id: int):
+    """Start processing restaurants orders using database instead of cache."""
+    melange_payload = []
+    bueno_payload = []
+
+    order = Order.objects.get(id=order_id)
+
     for item in order.items.all():
         restaurant = item.dish.restaurant.name.lower()
 
-        payload = {
-            "order": [
-                {
-                    "dish": item.dish.name,
-                    "quantity": item.quantity,
-                }
-            ]
+        dish_payload = {
+            "dish": item.dish.name,
+            "quantity": item.quantity
         }
 
         if restaurant == Restaurant.MELANGE:
-            response = httpx.post("http://localhost:8001/api/orders", json=payload)
+            melange_payload.append(dish_payload)
         elif restaurant == Restaurant.BUENO:
-            response = httpx.post("http://localhost:8002/", json=payload)
+            bueno_payload.append(dish_payload)
         else:
-            raise ValueError(f"Unknown restaurant: {restaurant}")
+            raise ValueError(f"Cannot process items from unknown restaurant: {restaurant}")
 
+    # === MELANGE ===
+    if melange_payload:
+        response = httpx.post("http://localhost:8001/api/orders", json={"order": melange_payload})
         response.raise_for_status()
-        data = response.json()
+        melange_data = response.json()
 
+        print("Creating ExternalOrder...", melange_data["id"])
         ExternalOrder.objects.create(
-            order=order,
-            restaurant=restaurant,
-            external_id=data["id"],
-            status=data["status"],
+            provider=Restaurant.MELANGE,
+            external_id=melange_data["id"],
+            status=melange_data["status"],
+            order=order
         )
+        print("ExternalOrder created!")
 
-    print(f"External orders stored in database for order ID {order.id}")
 
+def schedule_order(order_id: int):
+    _schedule_order.delay(order_id)
 
-def schedule_order(order: Order):
-    """Add the task to the queue for the future processing."""
-    assert type(order.eta) is date
-    # todo: remove
-    _schedule_order(order)
-    return None
-
+    order = Order.objects.get(id=order_id)
     if order.eta == date.today():
-        print(f"The order will be started processing now")
-        return schedule_order_task.delay(order)
-
+        print("The order will be started processing now")
+        melange_order_processing.delay(order.id)
     else:
-        # ETA: 3:00AM will be sent to restaurant APIs
-        eta = datetime.combine(order.eta, time(hour=3))
-        print(f"The order will be started processing {eta}")
-        return schedule_order_task.apply_async(args=(order,), eta=eta)
-
-
+        eta_time = datetime.combine(order.eta, time(hour=3))
+        print(f"The order will be processed at: {eta_time}")
+        melange_order_processing.apply_async(args=[order.id], eta=eta_time)

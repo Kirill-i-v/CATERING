@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 
+
 class Restaurant(models.Model):
     class Meta:
         db_table = "restaurants"
@@ -61,7 +62,7 @@ class ExternalOrder(models.Model):
     class Meta:
         db_table = "external_orders"
 
-    provider = models.CharField(max_length=20)  # "melange" or "bueno"
+    provider = models.CharField(max_length=20)
     external_id = models.CharField(max_length=100, unique=True)
     status = models.CharField(max_length=50)
     order = models.ForeignKey("Order", on_delete=models.CASCADE, related_name="external_orders")
