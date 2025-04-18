@@ -38,12 +38,6 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
             eta=serializer.validated_data["eta"],
         )
 
-        cache = CacheService()
-        cache_key = f"orders:{OrderStatus.NOT_STARTED}"
-        existing = cache.get("orders", OrderStatus.NOT_STARTED) or []
-        existing.append(order.pk)
-        cache.set("orders", OrderStatus.NOT_STARTED, existing)
-
         try:
             dishes_order = serializer.validated_data["food"]
         except KeyError:
@@ -66,6 +60,16 @@ class FoodAPIViewSet(viewsets.GenericViewSet):
             },
             status=status.HTTP_201_CREATED,
         )
+
+        # HTTP POST /food/orders/<ID>
+    @action(methods=["get"], detail=False, url_path=r"orders/(?P<id>\d+)")
+    def order_retrieve(self, request: WSGIRequest, id: int):
+        order: Order = Order.objects.get(id=id)
+        cache = CacheService()
+
+        order_in_cache = cache.get("orders", order.pk)
+
+        return Response(data=order_in_cache)
 
     # HTTP GET /food/restaurants
     @action(methods=["get"], detail=False)

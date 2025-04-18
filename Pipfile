@@ -12,11 +12,11 @@ psycopg2-binary = "~=2.9.10"
 celery = { version = "==5.4.0", extras = ["redis"]}
 gunicorn = "~=23.0.0"
 httpx = "~=0.28.1"
+fastapi = "~=0.115.12"
 
 [dev-packages]
 django-stubs = "*"
 celery-types = "*"
-fastapi = "~=0.115.12"
 pydantic = "~=2.11.3"
 uvicorn = "~=0.34.0"
 requests = "~=2.32.3"
