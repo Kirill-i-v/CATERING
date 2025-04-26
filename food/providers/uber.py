@@ -1,6 +1,5 @@
 import enum
 from dataclasses import asdict, dataclass
-
 import httpx
 
 
