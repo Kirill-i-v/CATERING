@@ -1,13 +1,36 @@
 from celery.result import AsyncResult
 from django.core.handlers.wsgi import WSGIRequest
 from rest_framework import routers, status, viewsets
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from .enums import OrderStatus
 from .models import Dish, DishOrderItem, Order, Restaurant
 from .serializers import DishSerializer, OrderCreateSerializer, RestaurantSerializer
-from .services import schedule_order
+from .services import schedule_order, all_orders_cooked, delivery_order
 from shared.cache import CacheService
+from django.db import transaction
+import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+
+@csrf_exempt
+def bueno_webhook(request):
+    data: dict = json.loads(json.dumps(request.POST))
+
+    cache = CacheService()
+    _order: dict = cache.get("bueno_orders", data["id"])
+
+    order: Order = Order.objects.get(id=_order["internal_order_id"])
+
+    Order.update_from_provider_status(id_=order.id, status=data["status"], delivery=False)
+
+    order_in_cache = cache.get("orders", order.id)
+    if all_orders_cooked(order_in_cache):
+        # Schedule the delivery if all orders are cooked
+        delivery_order.delay(order.id)
+
+    return JsonResponse({"message": "ok"})
 
 
 class FoodAPIViewSet(viewsets.GenericViewSet):

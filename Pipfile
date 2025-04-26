@@ -20,6 +20,12 @@ celery-types = "*"
 pydantic = "~=2.11.3"
 uvicorn = "~=0.34.0"
 requests = "~=2.32.3"
+flake8 = "*"
+black = "*"
+isort = "*"
+mypy = "*"
+pytest = "*"
+pytest-django = "*"
 
 [requires]
 python_version = "3.12"

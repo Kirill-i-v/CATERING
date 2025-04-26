@@ -1,0 +1,19 @@
+[flake8]
+exclude =
+    .git,
+    .github,
+    .mypy_cache,
+    __pycache__,
+    venv,
+    migrations,
+    docs,
+    seed
+
+extend-ignore =
+    # allow `elif` block
+    RET505,
+    # allow `else` block
+    RET506
+
+max-line-length = 79
+max-complexity = 10
