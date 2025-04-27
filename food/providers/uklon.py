@@ -1,6 +1,6 @@
 import enum
 from dataclasses import asdict, dataclass
-
+from config.settings import UKLON_BASE_URL
 import httpx
 
 
@@ -27,7 +27,7 @@ class OrderResponse:
 
 
 class Provider:
-    BASE_URL = "http://localhost:8003/drivers/orders"
+    BASE_URL = UKLON_BASE_URL
 
     @classmethod
     def create_order(cls, order: OrderRequestBody):

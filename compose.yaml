@@ -1,51 +1,101 @@
 services:
-  api:
-    build: .
+
+  api: &api
+    build:
+      context: .
+      target: prod
     # for debugging in Docker Container
     # stdin_open: true
     # tty: true
     container_name: catering_api
-    ports:
-      - "8000:8000"
+    env_file: ".env"
     volumes:
       - .:/app/
     depends_on:
+      - worker
       - database
+      - cache
+      - broker
+      - mailing
+
+  worker:
+    <<: *api
+    build: .
+    container_name: catering_worker
+    entrypoint: bash
+    command: -c "watchmedo auto-restart --recursive --pattern='*.py' -- celery -A config worker -l INFO"
+    ports: []
+    depends_on:
+      - database
+      - cache
+      - broker
+      - mailing
 
   database:
     image: "postgres:17"
     container_name: catering_database
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: catering
-    ports:
-      - "5432:5432"
+    env_file: ".env"
     volumes:
       - pg_data:/var/lib/postgresql/data
 
   cache:
     image: "redis:latest"
     container_name: catering_cache
-    ports:
-      - "6379:6379"
+    # ports:
+    #   - "6379:6379"
 
   broker:
     image: "redis:latest"
     container_name: catering_broker
-    ports:
-      - "6380:6379"
+    # ports:
+    #   - "6380:6379"
 
   mailing:
     image: axllent/mailpit
     container_name: catering_mailing
-    ports:
-      - "8025:8025" # HTTP
-      - "1025:1025" # SMTP
+    # ports:
+    #   - "8025:8025" # HTTP
+    #   - "1025:1025" # SMTP
     environment:
       MP_MAX_MESSAGES: 100
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+  test_melange:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      target: melange
+    container_name: catering_test_melange
+    ports:
+      - "8001:8000"
+
+  test_bueno:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      target: bueno
+    container_name: catering_test_bueno
+    ports:
+      - "8002:8000"
+
+  test_uklon:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      target: uklon
+    container_name: catering_test_uklon
+    ports:
+      - "8003:8000"
+
+  test_uber:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      target: uber
+    container_name: catering_test_uber
+    ports:
+      - "8004:8000"
 
 volumes:
   pg_data: {}

@@ -12,6 +12,7 @@ psycopg2-binary = "~=2.9.10"
 celery = { version = "==5.4.0", extras = ["redis"]}
 gunicorn = "~=23.0.0"
 httpx = "~=0.28.1"
+drf-yasg = "~=1.21.7"
 fastapi = "~=0.115.12"
 
 [dev-packages]

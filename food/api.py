@@ -12,7 +12,26 @@ from django.db import transaction
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from rest_framework.views import APIView
+from rest_framework import status
+from food.models import Order
+from food.serializers import OrderSerializer
 
+
+class OrderRetrieveView(APIView):
+    def get(self, request, order_id):
+        cache = CacheService()
+        order_in_cache = cache.get("orders", order_id)
+
+        if order_in_cache:
+            return Response(order_in_cache, status=status.HTTP_200_OK)
+
+        try:
+            order = Order.objects.get(id=order_id)
+            serializer = OrderSerializer(order)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Order.DoesNotExist:
+            return Response({"detail": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
 
 @csrf_exempt
 def bueno_webhook(request):

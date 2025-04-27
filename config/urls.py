@@ -17,8 +17,9 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from rest_framework_simplejwt.views import TokenObtainPairView
-from food.api import router as food_router
+from food.api import router as food_router, OrderRetrieveView
 from users.api import router as users_router
+
 
 urlpatterns = (
         [
@@ -26,6 +27,7 @@ urlpatterns = (
             # ==================
             path("admin/", admin.site.urls),
             path("auth/token/", TokenObtainPairView.as_view()),
+            path('food/orders/<int:order_id>/', OrderRetrieveView.as_view(), name='order-retrieve'),
             # ============================================
             # path("import-dishes/", import_dishes),
             # path("users/", user_create_retrieve),  # GET to retrieve user, POST to create user

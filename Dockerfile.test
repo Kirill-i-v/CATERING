@@ -1,0 +1,52 @@
+# ==================================================
+# SETUP BASE IMAGE
+# ==================================================
+FROM python:3.12-slim as base
+
+# ENV PYTHONUNBUFFERED=1
+
+RUN apt-get update -y \
+    # dependencies for building Python packages && cleaning apt apt packages
+    && apt-get install -y build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+
+RUN pip install --upgrade pip setuptools uvicorn httpx fastapi pydantic
+
+WORKDIR /app/
+COPY ./tests/providers ./
+
+# ==================================================
+# MULTI-STAGE BUILDS FOR PROVIDERS
+# ==================================================
+
+# BUENO
+from base as bueno
+
+EXPOSE 8000
+ENTRYPOINT ["python"]
+CMD ["-m", "uvicorn", "bueno:app", "--host", "0.0.0.0"]
+
+
+# MELANGE
+from base as melange
+
+EXPOSE 8000
+ENTRYPOINT ["python"]
+CMD ["-m", "uvicorn", "melange:app", "--host", "0.0.0.0"]
+
+
+# UKLON
+from base as uklon
+
+EXPOSE 8000
+ENTRYPOINT ["python"]
+CMD ["-m", "uvicorn", "uklon:app", "--host", "0.0.0.0"]
+
+
+# UBER
+from base as uber
+
+EXPOSE 8000
+ENTRYPOINT ["python"]
+CMD ["-m", "uvicorn", "uber:app", "--host", "0.0.0.0"]
