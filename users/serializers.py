@@ -6,6 +6,11 @@ from rest_framework import serializers
 User = get_user_model()
 
 
+class TokenObtainResponseSerializer(serializers.Serializer):
+    access = serializers.CharField()
+    refresh = serializers.CharField()
+
+
 class UserRegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = User

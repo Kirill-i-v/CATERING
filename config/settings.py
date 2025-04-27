@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 from django.core.mail.backends.smtp import EmailBackend
+from os import getenv
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -41,10 +42,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'core.apps.CoreConfig',
-    'rest_framework',
+    # 3-rd party
+    "rest_framework",
     "rest_framework_simplejwt",
-    'food',
-    'delivery',
+    "drf_yasg",
+    # custom
+    "food",
+    "delivery",
     "users",
     "shared",
 ]
@@ -85,19 +89,19 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql_psycopg2",
-        "NAME": "catering",
-        "USER": "postgres",
-        "PASSWORD": "postgres",
-        "HOST": "localhost",
-        "PORT": "5432",
-        #"ATOMIC_REQUESTS": False,
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": getenv("DATABASE_NAME", "catering"),
+        "USER": getenv("DATABASE_USER", "postgres"),
+        "PASSWORD": getenv("DATABASE_PASSWORD", "postgres"),
+        "HOST": getenv("DATABASE_HOST", "database"),
+        "PORT": getenv("DATABASE_PORT", 5432),
+        # "ATOMIC_REQUESTS": False,
     }
 }
 
 
 # Cache
-CACHE_CONNECTION_STRING = "redis://localhost:6379/0"
+CACHE_CONNECTION_STRING = getenv("CACHE_URL", "redis://cache:6379/0")
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -161,14 +165,21 @@ AUTH_USER_MODEL = "users.User"
 
 # MAILING SECTION
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "localhost"
+EMAIL_HOST = getenv("SMTP_HOST", default="mailing")
 EMAIL_PORT = 1025
 EMAIL_HOST_USER = "mailpit"
 EMAIL_HOST_PASSWORD = "mailpit"
 
 # CELERY SECTION
 # settings ref: https://docs.celeryq.dev/en/stable/userguide/configuration.html
-CELERY_BROKER_URL = "redis://localhost:6380/0"
+CELERY_BROKER_URL = getenv("BROKER_URL", default="redis://broker:6379/0")
 CELERY_ACCEPT_CONTENT = ["pickle", "application/json", "application/x-python-serialize"]
 CELERY_TASK_SERIALIZER = "pickle"
 CELERY_EVENT_SERIALIZER = "pickle"
+
+
+# PROVIDERS SECTION
+MELANGE_BASE_URL = getenv("MELANGE_BASE_URL", "http://melange:8001/api/orders")
+BUENO_BASE_URL = getenv("BUENO_BASE_URL", "http://bueno:8002")
+UKLON_BASE_URL = getenv("UKLON_BASE_URL", "http://uklon:8003/drivers/orders")
+UBER_BASE_URL = getenv("UBER_BASE_URL", "http://uber8004/drivers/orders")

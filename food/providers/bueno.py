@@ -1,6 +1,6 @@
 import enum
 from dataclasses import asdict, dataclass
-
+from config.settings import BUENO_BASE_URL
 import httpx
 
 from ._abc import RestaurantProvider
@@ -31,7 +31,7 @@ class OrderResponse:
 
 
 class Provider:
-    BASE_URL = "http://localhost:8002"
+    BASE_URL = BUENO_BASE_URL
 
     @classmethod
     def create_order(cls, order: OrderRequestBody):
