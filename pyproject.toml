@@ -1,0 +1,53 @@
+# ************************************************
+# ********** Code Quality Tools **********
+# ************************************************
+[tool.black]
+target-version = ["py312"]
+line-length = 79
+exclude = '''
+(
+  /(
+      \.eggs
+    | \.git
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | .pytest_cache
+    | seed
+  )/
+)
+'''
+
+
+[tool.isort]
+profile = "black"
+line_length = 79
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+src_paths = []
+
+
+[tool.mypy]
+python_version = "3.12"
+warn_redundant_casts = true
+warn_unused_ignores = true
+show_error_codes = true
+namespace_packages = true
+exclude = ["migrations"]
+
+# Silence "type import errors" as our 3rd-party libs does not have types
+# Check: https://mypy.readthedocs.io/en/latest/config_file.html#import-discovery
+follow_imports = 'silent'
+
+[[tool.mypy.overrides]]
+ignore_missing_imports=true
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py"]
+python_function = "test_*"
+cache_dir = "/tmp"
+addopts = "-s -vvv --cache-clear --reuse-db"
